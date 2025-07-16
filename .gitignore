@@ -1,0 +1,9 @@
+.env
+*.pyc
+__pycache__/
+logs/
+output/
+scrapy_playwright_debug/
+venv/
+screenshots/
+hotels.csv

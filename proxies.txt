@@ -1,0 +1,3 @@
+http://proxy1.example.com:8000
+http://proxy2.example.com:8000
+http://proxy3.example.com:8000
