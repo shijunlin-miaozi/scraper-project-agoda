@@ -7,3 +7,4 @@ scrapy_playwright_debug/
 venv/
 screenshots/
 hotels.csv
+.DS_Store
