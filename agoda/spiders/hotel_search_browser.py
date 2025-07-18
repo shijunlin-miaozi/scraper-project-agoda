@@ -46,12 +46,12 @@ class AgodaSearchSpider(scrapy.Spider):
                             # enter search prompt(format: hotel name, city) into search input box
                             PageMethod("fill", "input[data-selenium='textInput']", search_prompt),
                             PageMethod("wait_for_timeout", 1000),
-                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_1result.png"),
+                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_1result.png"),
                             
                             # click the first listing from auto suggestion box
                             PageMethod("click", 'li[data-selenium="topDestinationListItem"] >> nth=0'),
                             PageMethod("wait_for_timeout", 1000),
-                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_2result.png"),
+                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_2result.png"),
                             
                             # Dismiss cookie banner if present
                             PageMethod(
@@ -62,22 +62,13 @@ class AgodaSearchSpider(scrapy.Spider):
                                 }"""
                             ), 
                             PageMethod("wait_for_timeout", 1000),
-                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_3result.png"),
-                            
-                            # click check-in box to remove the drop-down calendar in case it blocks the search button
-                            # PageMethod("click","div[data-selenium='checkInBox']"),
-                            # PageMethod("wait_for_timeout", 1000),
-                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_4result.png"),
+                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_3result.png"),
                             
                             # click search button
                             PageMethod("click","button[data-selenium='searchButton']"),
                             PageMethod("wait_for_timeout", 3000),
-                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_5result.png"),
+                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_4result.png"),
                             
-                            # get to result listing page
-                            # PageMethod("wait_for_selector", "li.PropertyCard a", timeout=15000),
-                            # PageMethod("press", "input[data-selenium='textInput']", "escape"),
-                            # PageMethod("click", 'span[data-selenium="suggestion-text-highlight"]'),
                         ],
                         "hotel_query": hotel_name,
                         "true_address": true_address,
@@ -105,6 +96,12 @@ class AgodaSearchSpider(scrapy.Spider):
             response.urljoin(first_result),
             meta={
                 "playwright": True,
+                "playwright_page_methods": [
+                    PageMethod("wait_for_selector", "img"),  # wait for initial page load
+                    PageMethod("click", 'button[data-element-name="hotel-mosaic-see-all-photos"]'),
+                    # PageMethod("wait_for_timeout", 2000),  # waits 2 seconds
+                    PageMethod("wait_for_selector", "img"),  # wait again for images to load after click
+                ],
                 "hotel_query": hotel_query,
                 "true_address": response.meta.get("true_address"),
                 "dont_retry": False
@@ -117,15 +114,28 @@ class AgodaSearchSpider(scrapy.Spider):
         hotel_query = response.meta["hotel_query"]
         known_address = response.meta["true_address"]
 
-        scraped_address = response.css("span[data-selenium='hotel-address-map']::text").get()
-
         item = HotelItem()
         item["name_original"] = hotel_query
         item["name_agoda"] = response.css("h1[data-selenium='hotel-header-name']::text").get()
         item["url"] = response.url
         item["location_original"] = known_address
-        item["location_agoda"] = scraped_address
+        item["location_agoda"] = response.css("span[data-selenium='hotel-address-map']::text").get()
         item["description"] = response.css("span[data-element-name='property-short-description']::text").get().strip()
         item["facilities"] = response.css("div[data-element-name='atf-top-amenities-item'] p::text").getall()
-        item["image_urls"] = response.css("img::attr(src)").re(r'https://ak-d\.agoda\.net/[^"]+')
+
+        # New image extraction logic
+        image_sources = (
+            "pix8.agoda.net/hotelImages",
+            "pix8.agoda.net/property",
+            "bstatic.com/xdata/images/hotel/"
+        )
+        image_urls = []
+        for img in response.css("img"):
+            srcset = img.attrib.get("srcset")
+            if srcset and any(src in srcset for src in image_sources):
+                largest = srcset.split(",")[-1].strip().split(" ")[0]
+                full_url = response.urljoin(largest)
+                image_urls.append(full_url)
+        item["image_urls"] = image_urls
+        
         yield item
