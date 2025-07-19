@@ -1,6 +1,7 @@
 import scrapy
 import csv
 from scrapy_playwright.page import PageMethod
+from playwright_stealth import Stealth
 from ..items import HotelItem
 
 class AgodaSearchSpider(scrapy.Spider):
@@ -84,7 +85,31 @@ class AgodaSearchSpider(scrapy.Spider):
         if hasattr(self, "failed_writer"):
             self.failed_writer.writerow([hotel_query, "Request failed or timeout"])
 
-    def parse_search_results(self, response):
+    async def parse_search_results(self, response):
+        page = response.meta.get("playwright_page")
+        if page:
+            # Apply stealth to the browser context
+            stealth = Stealth()
+            await stealth.apply_stealth_async(page.context)
+
+            # debug fingerprint detection
+            val = await page.evaluate("""
+            () => ({
+                webdriver: navigator.webdriver,
+                languages: navigator.languages,
+                plugins: navigator.plugins.length,
+                chromeRuntime: !!(window.chrome && window.chrome.runtime)
+            })
+            """)
+            self.logger.info(f"[STEALTH DEBUG] {val}")
+            # expected output:
+                # {
+                # 'webdriver': False,
+                # 'languages': ['en-US', 'en'],
+                # 'plugins': 2,        # Or any number > 0
+                # 'chromeRuntime': True
+                # }
+
         hotel_query = response.meta["hotel_query"]
         first_result = response.css("li.PropertyCard a::attr(href)").get()
         if not first_result:
@@ -110,7 +135,24 @@ class AgodaSearchSpider(scrapy.Spider):
             errback=self.errback_search
         )
 
-    def parse_hotel_page(self, response):
+    async def parse_hotel_page(self, response):
+        page = response.meta.get("playwright_page")
+        if page:
+            # Apply stealth again for this new page context
+            stealth = Stealth()
+            await stealth.apply_stealth_async(page.context)
+            
+            # debug fingerprint detection
+            val = await page.evaluate("""
+            () => ({
+                webdriver: navigator.webdriver,
+                languages: navigator.languages,
+                plugins: navigator.plugins.length,
+                chromeRuntime: !!(window.chrome && window.chrome.runtime)
+            })
+            """)
+            self.logger.info(f"[STEALTH DEBUG] {val}")
+            
         hotel_query = response.meta["hotel_query"]
         known_address = response.meta["true_address"]
 

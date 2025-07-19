@@ -16,6 +16,8 @@ This file tracks the current status of the Agoda hotel scraper project.
 
 - Image extraction: able to extract 80% of the img urls (for example, extracted 79 out of 93 urls in one testing) 
     --> maybe good enough for now
+- Stealth integration using `playwright-stealth` to avoid detection  
+  → logic added, but not yet tested or verified
 
 
 ## ❌ Not Implemented / Broken
@@ -28,10 +30,22 @@ This file tracks the current status of the Agoda hotel scraper project.
     --> not tested
 
 
-## Notes
+## 🧪 Testing Environment
 
-- all the testings on the spider have been done on my pc with free vpn. the IP got blocked frequently. this greatly limits the testing effort. 
-- next step is to use paid rotational proxies against anti-bot measures, then conduct more robust testing
+- Local PC with free VPN
+- IP blocks happen quickly, limiting testability
+- **Next step**: implement paid rotational proxies, expand user-agent/header sets, begin realistic testing
 
 
-_Last updated: 2025-07-18_
+## 📅 Progress Log
+
+### 2025-07-19
+- Integrated `playwright-stealth` to reduce bot detection by Agoda
+- Applied stealth logic in both `parse_search_results` and `parse_hotel_page` functions
+- Not yet tested — needs validation against real CAPTCHA response behavior
+
+### 2025-07-18
+- Extracted 79/93 images urls successfully in test case
+- Noted repeated IP blocking when testing locally
+
+_Last updated: 2025-07-19_
