@@ -50,16 +50,6 @@ class AgodaSearchSpider(scrapy.Spider):
                     meta={
                         "playwright": True,
                         "playwright_page_methods": [
-                            # enter search prompt(format: hotel name, city) into search input box
-                            PageMethod("fill", "input[data-selenium='textInput']", search_prompt),
-                            PageMethod("wait_for_timeout", 1000),
-                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_1result.png"),
-                            
-                            # click the first listing from auto suggestion box
-                            PageMethod("click", 'li[data-selenium="topDestinationListItem"] >> nth=0'),
-                            PageMethod("wait_for_timeout", 1000),
-                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_2result.png"),
-                            
                             # Dismiss cookie banner if present
                             PageMethod(
                                 "evaluate",
@@ -69,12 +59,22 @@ class AgodaSearchSpider(scrapy.Spider):
                                 }"""
                             ), 
                             PageMethod("wait_for_timeout", 1000),
-                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_3result.png"),
+                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_1cookie.png"),
+                            
+                            # enter search prompt(format: hotel name, city) into search input box
+                            PageMethod("fill", "input[data-selenium='textInput']", search_prompt),
+                            PageMethod("wait_for_timeout", 1000),
+                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_2inputPrompt.png"),
+                            
+                            # click the first listing from auto suggestion box
+                            PageMethod("click", 'li[data-selenium="topDestinationListItem"] >> nth=0'),
+                            PageMethod("wait_for_timeout", 1000),
+                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_3suggestBox.png"),
                             
                             # click search button
                             PageMethod("click","button[data-selenium='searchButton']"),
                             PageMethod("wait_for_timeout", 3000),
-                            # PageMethod("screenshot", path=f"screenshots/{hotel_name}_4result.png"),
+                            PageMethod("screenshot", path=f"screenshots/{hotel_name}_4searchButton.png"),
                             
                         ],
                         "hotel_query": hotel_name,

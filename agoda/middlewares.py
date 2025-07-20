@@ -1,4 +1,4 @@
-import os
+
 import random
 from playwright_stealth import Stealth
 import json
@@ -6,13 +6,11 @@ import json
 class ProxyUserAgentAndCaptchaMiddleware:
     """Handles proxy rotation, user‑agent spoofing, header rotation and CAPTCHA retry."""
 
-    def __init__(self, agoda_user_agents, chrome_headers, proxies, retry_times, proxy_username, proxy_password):
+    def __init__(self, agoda_user_agents, chrome_headers, proxies, retry_times):
         self.agoda_user_agents = agoda_user_agents
         self.chrome_headers = chrome_headers
         self.proxies = proxies
         self.retry_times = retry_times
-        self.proxy_username = proxy_username
-        self.proxy_password = proxy_password
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -30,11 +28,7 @@ class ProxyUserAgentAndCaptchaMiddleware:
         
         retry_times = crawler.settings.getint("CAPTCHA_RETRY_TIMES", 3)
         
-        # Get credentials from .env
-        username = os.getenv("PROXY_USERNAME")
-        password = os.getenv("PROXY_PASSWORD")
-        
-        return cls(ua_list, chrome_headers, proxies, retry_times, username, password)
+        return cls(ua_list, chrome_headers, proxies, retry_times)
 
 
     # ----------- REQUEST -------------
@@ -46,11 +40,7 @@ class ProxyUserAgentAndCaptchaMiddleware:
         
         # Random proxy
         proxy = random.choice(self.proxies)
-        
-        # Inject credentials if placeholders present
-        if self.proxy_username and self.proxy_password:
-            proxy = proxy.replace("USERNAME", self.proxy_username).replace("PASSWORD", self.proxy_password)
-        
+        # Proxy is already IP-authenticated, no credential injection needed
         request.meta["proxy"] = proxy
 
         # Domain‑specific headers
