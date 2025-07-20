@@ -1,5 +1,5 @@
-
 import random
+from playwright_stealth import Stealth
 
 class ProxyUserAgentAndCaptchaMiddleware:
     """Handles proxy rotation, user‑agent spoofing, header rotation and CAPTCHA retry."""
@@ -69,3 +69,32 @@ class ProxyUserAgentAndCaptchaMiddleware:
             new_request.headers.pop("User-Agent", None)
             return new_request
         return response
+
+
+# -----------------------------
+# New stealth middleware class
+# -----------------------------
+class PlaywrightStealthMiddleware:
+    """Automatically applies stealth fingerprinting protection to all Playwright pages."""
+
+    async def __call__(self, page, request):
+        stealth = Stealth()
+        await stealth.apply_stealth_async(page.context)
+
+        # Optional fingerprint logging for debugging
+        val = await page.evaluate("""
+        () => ({
+            webdriver: navigator.webdriver,
+            languages: navigator.languages,
+            plugins: navigator.plugins.length,
+            chromeRuntime: !!(window.chrome && window.chrome.runtime)
+        })
+        """)
+        # expected output:
+            # { 'webdriver': False,
+            #   'languages': ['en-US', 'en'],
+            #   'plugins': 2,        # Or any number > 0
+            #   'chromeRuntime': True}
+            
+        request.meta["stealth_debug"] = val  # Can log this in parse_ functions if needed
+        return page

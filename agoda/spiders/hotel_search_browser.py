@@ -1,7 +1,6 @@
 import scrapy
 import csv
 from scrapy_playwright.page import PageMethod
-from playwright_stealth import Stealth
 from ..items import HotelItem
 
 class AgodaSearchSpider(scrapy.Spider):
@@ -18,6 +17,13 @@ class AgodaSearchSpider(scrapy.Spider):
     def close_spider(self, spider):
         if hasattr(self, "failed_hotels"):
             self.failed_hotels.close()
+            
+    def log_stealth_debug(self, response, label="STEALTH DEBUG"):
+        # to verify stealth was applied correctly (in test mode only)
+        if self.settings.getbool("TEST_MODE"):
+            debug = response.meta.get("stealth_debug")
+            if debug:
+                self.logger.info(f"[{label}] {debug}")
 
     async def start(self):
         input_file = self.settings.get("HOTELS_FILE")
@@ -86,30 +92,8 @@ class AgodaSearchSpider(scrapy.Spider):
             self.failed_writer.writerow([hotel_query, "Request failed or timeout"])
 
     async def parse_search_results(self, response):
-        page = response.meta.get("playwright_page")
-        if page:
-            # Apply stealth to the browser context
-            stealth = Stealth()
-            await stealth.apply_stealth_async(page.context)
-
-            # debug fingerprint detection
-            val = await page.evaluate("""
-            () => ({
-                webdriver: navigator.webdriver,
-                languages: navigator.languages,
-                plugins: navigator.plugins.length,
-                chromeRuntime: !!(window.chrome && window.chrome.runtime)
-            })
-            """)
-            self.logger.info(f"[STEALTH DEBUG] {val}")
-            # expected output:
-                # {
-                # 'webdriver': False,
-                # 'languages': ['en-US', 'en'],
-                # 'plugins': 2,        # Or any number > 0
-                # 'chromeRuntime': True
-                # }
-
+        self.log_stealth_debug(response, label="STEALTH DEBUG [SEARCH]")
+                
         hotel_query = response.meta["hotel_query"]
         first_result = response.css("li.PropertyCard a::attr(href)").get()
         if not first_result:
@@ -135,24 +119,9 @@ class AgodaSearchSpider(scrapy.Spider):
             errback=self.errback_search
         )
 
-    async def parse_hotel_page(self, response):
-        page = response.meta.get("playwright_page")
-        if page:
-            # Apply stealth again for this new page context
-            stealth = Stealth()
-            await stealth.apply_stealth_async(page.context)
-            
-            # debug fingerprint detection
-            val = await page.evaluate("""
-            () => ({
-                webdriver: navigator.webdriver,
-                languages: navigator.languages,
-                plugins: navigator.plugins.length,
-                chromeRuntime: !!(window.chrome && window.chrome.runtime)
-            })
-            """)
-            self.logger.info(f"[STEALTH DEBUG] {val}")
-            
+    async def parse_hotel_page(self, response): 
+        self.log_stealth_debug(response, label="STEALTH DEBUG [HOTEL PAGE]")
+                   
         hotel_query = response.meta["hotel_query"]
         known_address = response.meta["true_address"]
 
@@ -165,7 +134,7 @@ class AgodaSearchSpider(scrapy.Spider):
         item["description"] = response.css("span[data-element-name='property-short-description']::text").get().strip()
         item["facilities"] = response.css("div[data-element-name='atf-top-amenities-item'] p::text").getall()
 
-        # New image extraction logic
+        # image url extraction
         image_sources = (
             "pix8.agoda.net/hotelImages",
             "pix8.agoda.net/property",

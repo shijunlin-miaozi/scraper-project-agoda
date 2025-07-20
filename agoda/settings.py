@@ -95,3 +95,6 @@ DOWNLOADER_MIDDLEWARES = {
 }
 
 CAPTCHA_RETRY_TIMES = 1 # adjust this for production mode
+
+# Register stealth coroutine handler for Playwright pages
+PLAYWRIGHT_PAGE_COROUTINES = "agoda.middlewares.PlaywrightStealthMiddleware"
