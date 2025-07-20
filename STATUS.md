@@ -37,6 +37,14 @@ This file tracks the current status of the Agoda hotel scraper project.
 - **Next step**: implement paid rotational proxies, expand user-agent/header sets, begin realistic testing
 
 
+### ⚖️ Trade-off: Browser Variety vs. Stealth Protection
+We chose to use Chrome-only User-Agents to match Playwright’s stealth fingerprinting (which emulates Chrome). This limits UA diversity but ensures consistency and lowers fingerprint mismatch risk.
+
+Alternative (not chosen): rotating across browser families (Safari, Firefox) would increase realism, but break stealth logic and increase detection risk.
+
+We may revisit this if blocking increases or we change away from stealth-based defense.
+
+
 ## 📅 Progress Log
 
 ### 2025-07-19

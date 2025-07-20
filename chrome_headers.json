@@ -1,0 +1,42 @@
+{
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.94 Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.34 Safari/537.36": {
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Referer": "https://www.google.co.uk/"
+  },
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.8",
+    "Referer": "https://duckduckgo.com/"
+  },
+  "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.52 Mobile Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.217 Safari/537.36 Edg/120.0.2210.160": {
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.bing.com/"
+  },
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.94 Safari/537.36": {
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.52 Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (Linux; Android 14; SM-S926B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.50 Mobile Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.8",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.184 Safari/537.36": {
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  },
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.18 Safari/537.36": {
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Referer": "https://www.google.com/"
+  }
+}
