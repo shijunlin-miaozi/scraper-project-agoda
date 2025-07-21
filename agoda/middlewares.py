@@ -6,6 +6,7 @@ import http.cookies
 from playwright_stealth import Stealth
 
 CAPTCHA_THRESHOLD = 3  # Reset cookies after this many CAPTCHA hits
+PROXY_REUSE_LIMIT = 5  # Number of requests per proxy before switching
 
 class ProxyUserAgentAndCaptchaMiddleware:
     """Handles proxy rotation, user‑agent spoofing, header rotation and CAPTCHA retry."""
@@ -18,6 +19,9 @@ class ProxyUserAgentAndCaptchaMiddleware:
         self.cookie_jar_path = "cookies.json"
         self.cookie_jar = self.load_cookies()
         self.proxy_captcha_count = {}  # Track CAPTCHA frequency per proxy
+        self.current_proxy = None
+        self.proxy_request_count = 0
+
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -56,8 +60,14 @@ class ProxyUserAgentAndCaptchaMiddleware:
         # if spider.settings.getbool("TEST_MODE"):
         #     return None  # Skip proxy/user-agent rotation in test mode
         
-        # Random proxy
-        proxy = random.choice(self.proxies)
+        if not self.current_proxy or self.proxy_request_count >= PROXY_REUSE_LIMIT:
+            self.current_proxy = random.choice(self.proxies)
+            self.proxy_request_count = 0  # Reset count for new proxy
+            if spider.settings.getbool("TEST_MODE"):
+                spider.logger.info(f"[PROXY] Rotated to new proxy: {self.current_proxy}")
+
+        proxy = self.current_proxy
+        self.proxy_request_count += 1 # Count how many times current proxy has been used
         # Proxy is already IP-authenticated, no credential injection needed
         request.meta["proxy"] = proxy
 
@@ -100,7 +110,10 @@ class ProxyUserAgentAndCaptchaMiddleware:
         """Save cookies if any, detect CAPTCHA/verify pages and trigger retry with a new proxy/user-agent."""
         
         proxy = request.meta.get("proxy")
-    
+        if not proxy:
+            spider.logger.warning("[PROXY] No proxy found in request.meta — skipping CAPTCHA and cookie logic.")
+            return response
+        
         # --- Cookie Saving ---
         set_cookie_headers = response.headers.getlist("Set-Cookie")
         if set_cookie_headers:
@@ -116,13 +129,17 @@ class ProxyUserAgentAndCaptchaMiddleware:
             }
             self.save_cookies()
         
-        # --- CAPTCHA Detection ---
+        # --- CAPTCHA Detection and Proxy Reset Logic ---
         lower = response.text.lower()
         if ("captcha" in lower or "verify" in lower) and request.meta.get("retry_times", 0) < self.retry_times:
             count = self.proxy_captcha_count.get(proxy, 0) + 1
             self.proxy_captcha_count[proxy] = count
-
+            
             spider.logger.warning(f"CAPTCHA detected for proxy {proxy} (hit #{count}) — retrying {request.url}")            
+            
+            # Reset current proxy on CAPTCHA detection to trigger rotation
+            self.current_proxy = None
+            self.proxy_request_count = 0
             
             # Reset cookies after n CAPTCHA hits
             if count >= CAPTCHA_THRESHOLD:
