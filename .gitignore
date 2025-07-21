@@ -8,3 +8,4 @@ venv/
 screenshots/
 hotels.csv
 .DS_Store
+cookies.json

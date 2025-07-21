@@ -1,7 +1,11 @@
-
-import random
-from playwright_stealth import Stealth
+import os
 import json
+import random
+import datetime
+import http.cookies
+from playwright_stealth import Stealth
+
+CAPTCHA_THRESHOLD = 3  # Reset cookies after this many CAPTCHA hits
 
 class ProxyUserAgentAndCaptchaMiddleware:
     """Handles proxy rotation, user‑agent spoofing, header rotation and CAPTCHA retry."""
@@ -11,6 +15,9 @@ class ProxyUserAgentAndCaptchaMiddleware:
         self.chrome_headers = chrome_headers
         self.proxies = proxies
         self.retry_times = retry_times
+        self.cookie_jar_path = "cookies.json"
+        self.cookie_jar = self.load_cookies()
+        self.proxy_captcha_count = {}  # Track CAPTCHA frequency per proxy
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -18,11 +25,9 @@ class ProxyUserAgentAndCaptchaMiddleware:
         with open("proxies.txt") as pf:
             proxies = [line.strip() for line in pf if line.strip()]
         with open("user_agents.txt") as uf:
-            ua_list = [line.strip() for line in uf if line.strip()]
-            
+            ua_list = [line.strip() for line in uf if line.strip()]            
         with open("chrome_headers.json", encoding="utf-8") as hf:
-            chrome_headers = json.load(hf)
-            
+            chrome_headers = json.load(hf)            
         # Filter UA list to only ones that exist in the header mapping
         ua_list = [ua for ua in ua_list if ua in chrome_headers]
         
@@ -30,10 +35,23 @@ class ProxyUserAgentAndCaptchaMiddleware:
         
         return cls(ua_list, chrome_headers, proxies, retry_times)
 
+    def load_cookies(self):
+        if os.path.exists(self.cookie_jar_path):
+            if os.path.getsize(self.cookie_jar_path) > 0:
+                with open(self.cookie_jar_path, "r") as f:
+                    return json.load(f)
+            else:
+                # Log for debug visibility in test mode
+                print(f"[COOKIES] '{self.cookie_jar_path}' is empty — starting with fresh jar.")
+        return {}
+
+    def save_cookies(self):
+        with open(self.cookie_jar_path, "w") as f:
+            json.dump(self.cookie_jar, f, indent=2)
 
     # ----------- REQUEST -------------
     def process_request(self, request, spider):
-        """Attach proxy & headers before sending the request."""
+        """Attach cookies, proxy & headers before sending the request."""
         
         # if spider.settings.getbool("TEST_MODE"):
         #     return None  # Skip proxy/user-agent rotation in test mode
@@ -42,6 +60,23 @@ class ProxyUserAgentAndCaptchaMiddleware:
         proxy = random.choice(self.proxies)
         # Proxy is already IP-authenticated, no credential injection needed
         request.meta["proxy"] = proxy
+
+        # Inject cookies if valid
+        proxy_data = self.cookie_jar.get(proxy)
+        if proxy_data:
+            age = datetime.datetime.utcnow() - datetime.datetime.fromisoformat(proxy_data["last_updated"])
+            if age.total_seconds() < 86400:  # 24 hours
+                cookie_str = "; ".join(f"{k}={v}" for k, v in proxy_data["cookies"].items())
+                request.headers["Cookie"] = cookie_str
+                
+                # ✅ Log cookie string in test mode
+                if spider.settings.getbool("TEST_MODE"):
+                    spider.logger.info(f"[COOKIES] Injected for proxy {proxy}: {cookie_str}")
+            else:
+                del self.cookie_jar[proxy]  # expired
+                self.save_cookies()
+                # Log when cookies are cleared due to expiration
+                spider.logger.info(f"[COOKIES] Expired for proxy {proxy}, removed from jar")
 
         # Domain‑specific headers
         if "agoda.com" in request.url:
@@ -62,17 +97,61 @@ class ProxyUserAgentAndCaptchaMiddleware:
 
     # ----------- RESPONSE ------------
     def process_response(self, request, response, spider):
-        """Detect CAPTCHA/verify pages and trigger retry with a new proxy/user-agent."""
+        """Save cookies if any, detect CAPTCHA/verify pages and trigger retry with a new proxy/user-agent."""
+        
+        proxy = request.meta.get("proxy")
+    
+        # --- Cookie Saving ---
+        set_cookie_headers = response.headers.getlist("Set-Cookie")
+        if set_cookie_headers:
+            jar = {}
+            for header in set_cookie_headers:
+                simple_cookie = http.cookies.SimpleCookie()
+                simple_cookie.load(header.decode() if isinstance(header, bytes) else header)
+                for k, morsel in simple_cookie.items():
+                    jar[k] = morsel.value
+            self.cookie_jar[request.meta["proxy"]] = {
+                "cookies": jar,
+                "last_updated": datetime.datetime.utcnow().isoformat()
+            }
+            self.save_cookies()
+        
+        # --- CAPTCHA Detection ---
         lower = response.text.lower()
         if ("captcha" in lower or "verify" in lower) and request.meta.get("retry_times", 0) < self.retry_times:
-            spider.logger.warning("CAPTCHA detected — retrying %s" % request.url)
+            count = self.proxy_captcha_count.get(proxy, 0) + 1
+            self.proxy_captcha_count[proxy] = count
+
+            spider.logger.warning(f"CAPTCHA detected for proxy {proxy} (hit #{count}) — retrying {request.url}")            
+            
+            # Reset cookies after n CAPTCHA hits
+            if count >= CAPTCHA_THRESHOLD:
+                spider.logger.warning(f"⚠️ Clearing cookies for proxy {proxy} after {CAPTCHA_THRESHOLD} CAPTCHA hits")
+                self.cookie_jar.pop(proxy, None)
+                self.save_cookies()
+                self.proxy_captcha_count[proxy] = 0
+            
             new_request = request.copy()
             new_request.dont_filter = True  # allow duplicate
             # increment retry counter
             new_request.meta["retry_times"] = request.meta.get("retry_times", 0) + 1
-            # Force new proxy & UA on retry
-            new_request.headers.pop("User-Agent", None)
+            
+            # ✅ Rotate User-Agent
+            ua = random.choice(self.agoda_user_agents)
+            hdr_extra = self.chrome_headers.get(ua, {})
+            new_request.headers["User-Agent"] = ua
+            for k, v in hdr_extra.items():
+                new_request.headers[k] = v
+            new_request.meta["user_agent"] = ua
+            
+            # Log rotated UA during retry for debugging
+            if spider.settings.getbool("TEST_MODE"):
+                spider.logger.info(f"[UA ROTATE] New UA after CAPTCHA for proxy {proxy}: {ua}")
+            
             return new_request
+        
+        # --- Successful response → reset CAPTCHA count
+        self.proxy_captcha_count[proxy] = 0
         return response
 
 
