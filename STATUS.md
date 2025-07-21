@@ -10,6 +10,9 @@ This file tracks the current status of the Agoda hotel scraper project.
 - Detail page scraping: name, address, description, facilities
 - Playwright integration for dynamic content
 - Clicking "See all photos" and extracting high-resolution image urls
+- Headful mode debugging via DevTools pause in TEST_MODE
+- Session-level cookie injection and storage via middleware
+- Per-proxy reuse logic (N requests per proxy before rotation)
 
 
 ## ⚠️ Partially Working / In Progress
@@ -19,7 +22,7 @@ This file tracks the current status of the Agoda hotel scraper project.
 - Stealth integration using `playwright-stealth` to avoid detection  
     → logic integrated and activated in middleware, but stealth effectiveness still unverified
 - Proxy/User-Agent middleware (`middlewares.py`)
-    → logic in place and integrated (tested in requests), but proxy quality limits stealth effectiveness
+    → well integrated, but CAPTCHA rate still high 
 
 
 ## ❌ Not Implemented / Broken
@@ -32,11 +35,12 @@ This file tracks the current status of the Agoda hotel scraper project.
 
 ## 🧪 Testing Environment
 
-- Local MacBook Air with IP-authenticated free datacenter proxies (Webshare)
-- Playwright + Stealth in use, with Chrome-only user-agent/header pairs for fingerprint consistency
-- CAPTCHA detection still frequent — likely due to use of free datacenter proxies (commonly flagged)
-- IP-auth proxies successfully integrated via whitelisting (no Proxy-Authorization used)
-- **Next step**: upgrade to paid residential proxies or higher-quality datacenter proxies for larger-scale realistic testing
+- MacBook Air with IP-authenticated paid residential proxies (Webshare)
+- Playwright + Stealth + Chrome-only user-agent/header pairs for fingerprint consistency
+- Cookie injection and persistence across runs enabled
+- CAPTCHA detection frequent but auto-handling improved (via cookie reset + proxy rotate)
+- Headful mode now available in TEST_MODE for DOM inspection and debugging
+- **Next step**: Simulate Natural Browser Behavior More Closely; warmup coroutine; soft block detection
 
 
 ### ⚖️ Trade-off: Browser Variety vs. Stealth Protection
@@ -48,6 +52,13 @@ We may revisit this if blocking increases or we change away from stealth-based d
 
 
 ## 📅 Progress Log
+
+### 2025-07-21
+- Enabled Playwright headful mode in TEST_MODE for DevTools inspection
+- Added debug_pause() coroutine to pause and inspect browser with DevTools
+- Implemented session-based cookie management: save/load per proxy, auto-reset on CAPTCHA
+- Introduced proxy reuse control: group N requests per proxy before rotating
+- Improved debug logging for cookies, proxy count, CAPTCHA hits
 
 ### 2025-07-20
 - Switched to IP-authenticated proxies due to Playwright’s lack of support for authenticated HTTP proxies
@@ -67,4 +78,4 @@ We may revisit this if blocking increases or we change away from stealth-based d
 - Extracted 79/93 images urls successfully in test case
 - Noted repeated IP blocking when testing locally
 
-_Last updated: 2025-07-20_
+_Last updated: 2025-07-21_
