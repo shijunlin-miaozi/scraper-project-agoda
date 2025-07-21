@@ -19,6 +19,11 @@ ROBOTSTXT_OBEY = False
 DOWNLOAD_DELAY = 2
 CONCURRENT_REQUESTS = 1
 
+
+# ──────────────────────────────────────────────
+# Toggle between test and production
+TEST_MODE = os.getenv("TEST_MODE", "true").lower() == "true"
+
 # ──────────────────────────────────────────────
 # Playwright integration
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
@@ -27,11 +32,13 @@ DOWNLOAD_HANDLERS = {
     "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
 }
-PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": True}
-
-# ──────────────────────────────────────────────
-# Toggle between test and production
-TEST_MODE = os.getenv("TEST_MODE", "true").lower() == "true"
+# PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": True}
+# Toggle headless mode based on TEST_MODE
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": not TEST_MODE,       # Headful in TEST_MODE, headless in production
+    "slow_mo": 500 if TEST_MODE else 0,
+    "args": ["--auto-open-devtools-for-tabs"],
+}
 
 # Input CSV file
 HOTELS_FILE = os.getenv("HOTELS_FILE", "hotels.csv")
@@ -97,4 +104,11 @@ DOWNLOADER_MIDDLEWARES = {
 CAPTCHA_RETRY_TIMES = 1 # adjust this for production mode
 
 # Register stealth coroutine handler for Playwright pages
-PLAYWRIGHT_PAGE_COROUTINES = "agoda.middlewares.PlaywrightStealthMiddleware"
+# PLAYWRIGHT_PAGE_COROUTINES = "agoda.middlewares.PlaywrightStealthMiddleware"
+# debug_pause on headful mode for debug
+PLAYWRIGHT_PAGE_COROUTINES = {
+    "default": [
+        "agoda.middlewares.PlaywrightStealthMiddleware",
+        "agoda.playwright_debug.debug_pause",
+    ]
+}
