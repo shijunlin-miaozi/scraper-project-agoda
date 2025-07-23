@@ -1,11 +1,21 @@
-.env
+
+# Bytecode and system files
 *.pyc
 __pycache__/
-logs/
-output/
-scrapy_playwright_debug/
-venv/
-screenshots/
-hotels.csv
 .DS_Store
-cookies.json
+
+# Environment files
+.env
+*/.env
+
+# Virtual environments
+venv/
+*/venv/
+
+# Project output and state
+*/logs/
+*/output/
+*/screenshots/
+*/scrapy_playwright_debug/
+*/hotels.csv
+*/cookies.json
