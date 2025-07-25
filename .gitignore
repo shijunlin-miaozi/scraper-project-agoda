@@ -19,3 +19,5 @@ venv/
 */scrapy_playwright_debug/
 */hotels.csv
 */cookies.json
+*/headers.json
+*/proxies.txt

@@ -1,0 +1,7 @@
+psycopg2-binary
+python-dotenv
+scrapy
+nodriver
+random_user_agent
+geoip2
+jsonschema
